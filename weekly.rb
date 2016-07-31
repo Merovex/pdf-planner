@@ -150,7 +150,7 @@ def minicalendar(fom)
  	  week_offset = (offset * week_offset(fom,sdate,edate,date)) * 0.8
  	  fill_color case
 			when is_holiday?(date)
-				"FF9999"
+				"FF6666"
 			when date.cwday > 5
 				"9999FF"
 			when date.mon != fom.mon
@@ -171,11 +171,9 @@ def week_offset(fom,bom,eom,date)
 	if fom.mon == 12
 		cweek = date.cweek + 52 if eom.cweek < fom.cweek
 	elsif fom.mon == 1 
-
 		bweek = 0 if bom.mon == 12
 		cweek = date.cweek
 		cweek = 0 if cweek == 53
-		ap "#{bom} <=> #{date} <=> #{eom} (#{bweek}; #{cweek})"
 	end
 	return bweek - cweek
 end
