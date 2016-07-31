@@ -51,12 +51,12 @@ def drawMonthDate(date, s, h, j)
 				:font => 'DroidSans'
 	end
 	draw_text date.strftime("#{%w(U M T W R F S U)[date.cwday]}"),
-			:at => [s + 8,  h - 14],
+			:at => [s + 12,  h - 14],
 			:size => 7,
 			:font => 'DroidSansMono'
 
 	draw_text date.strftime("%_d %b"),
-			:at => [s + 16, h - 14],
+			:at => [s + 20, h - 14],
 			:size => 10,
 			:font => 'DroidSansMono'
 
@@ -88,10 +88,13 @@ def wideRule(i=30, s=nil,w=nil,dates=nil)
 				drawMonthDate(date, s, h, j) if i >27
 			end
 		else
-			circle [s + (r/2),h - (r/2)], (r * 0.1) unless j + 1 > i
+			circle    [s + (r/2),h - (r/2)], (r * 0.1) unless j + 1 > i
 			rectangle [s + (r/4),h - (r/4)], (r * 0.5),(r * 0.5) unless j + 1 > i
 		end
 		resetStroke
+		if dates.is_a? Array and i > 27 and j < dates.size
+			stroke_color "999999" if dates[j].cwday == 1
+		end
 		stroke_horizontal_line s, w, :at => h unless (dates.is_a? Array and i > 27 and j == 0)
 		drawGrid(h,r,s,w)  unless dates.is_a? Array
 		h -= r
@@ -195,7 +198,7 @@ end
 def drawMonthTitle(date)
 	word = date.strftime("%B %Y")
 	cline = (bounds.height / 2) - (width_of(date.strftime("%B %Y")) / 2)
-	draw_text word, :at => [0,cline], :rotate => 90, :size => 16
+	draw_text word, :at => [8,cline], :rotate => 90, :size => 16
 end
 
 def setFont
@@ -215,9 +218,10 @@ Prawn::Document.generate(
 		offset = 0
 		line_width = 1
 		@today = Date.today
-		12.times do |i|
-			@fom   = Date.new(@today.year,i + 1 + offset,1)
-			@eom   = Date.new(@today.year,i + 1 + offset,-1)
+		(8..8).to_a.each do |i|
+			
+			@fom   = Date.new(@today.year,i + offset,1)
+			@eom   = Date.new(@today.year,i + offset,-1)
 
 			# Set the Month Calendar View
 		  if true
