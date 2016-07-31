@@ -45,6 +45,7 @@ def drawGrid(h,r,s,w)
 	stroke_color "888888"
 	stroke_horizontal_line s, w, :at => h			
 	undash
+	resetStroke
 end
 def wideRule(i=30, s=nil,w=nil,dates=nil)
 
@@ -69,8 +70,9 @@ def wideRule(i=30, s=nil,w=nil,dates=nil)
 	end
 end
 def drawMargins
-	dash(2, :space => 7, :phase => 7)
-	resetStroke
+	dash(4, :space => 7, :phase => 0)
+	
+	stroke_color "888888"
 	# stroke_horizontal_line bounds.left, bounds.width, :at => bounds.bottom
 	# stroke_horizontal_line bounds.left, bounds.width, :at => bounds.height
 	stroke_vertical_line   bounds.left, bounds.height, :at => bounds.top_left
@@ -79,6 +81,7 @@ def drawMargins
 	stroke_vertical_line bounds.left, bounds.height, :at => mid + 36
 	stroke_vertical_line 0, bounds.height + 36, :at => mid
 	undash()
+	resetStroke
 end
 
 def junior
