@@ -2,25 +2,36 @@ require 'date'
 require 'holidays'
 require 'prawn'
 require 'awesome_print'
+
 def is_holiday?(date)
 	(Holidays.on(date, :us).size > 0) ? true : false
 end
-# Letter size = 612pt bounds.width (8/5"), 792pt bounds.height
 def dump(s)
 	ap s; exit
 end
-# def rxColLeft
-# 	mid + 36
-# end
 def mid
 		(bounds.width - 5) / 2
 end
+def holiday(date)
+	Holidays.on(date, :us).first[:name]
+end
 def drawWeekDate(date, s, h, j)
-	fill_color "000000" 
-	draw_text date.strftime("%A, %-d %B"), :at => [s + 3, h - 12]
+	fill_color case
+		when is_holiday?(date)
+			"FF0000"
+		when date.cwday > 5
+			"0000FF"
+		else
+			"000000"
+	end
+	word = date.strftime("%A, %-d %B")
+	draw_text word, :at => [s + 3, h - 12]
+	draw_text holiday(date), :at => [s + 3, h - (12 * 2)] if is_holiday?(date)
 	fill_color "CCCCCC" 
-	x = (j == 0) ? ["(%W, %0j)",280] : ["    (%0j)",286]
-	draw_text date.strftime(x[0]), :at => [s + x[1], h - 12]
+	x = (j == 0) ? "(%W, %0j)" : "(%0j)"
+
+	word = date.strftime(x)
+	draw_text date.strftime(x), :at => [320 - width_of(word), h - 12]
 	fill_color "000000" 
 end
 def drawMonthDate(date, s, h, j)
@@ -33,7 +44,7 @@ def drawMonthDate(date, s, h, j)
 			"000000"
 	end
 	if is_holiday?(date)
-		holiday = Holidays.on(date, :us).first[:name]
+		holiday = holiday(date)
 		draw_text date.strftime(holiday),
 				:at => [320 - width_of(holiday), h - 14],
 				:size => 10,
@@ -76,6 +87,9 @@ def wideRule(i=30, s=nil,w=nil,dates=nil)
 				drawWeekDate(date, s, h, j)  if i == 7
 				drawMonthDate(date, s, h, j) if i >27
 			end
+		else
+			circle [s + (r/2),h - (r/2)], (r * 0.1) unless j + 1 > i
+			rectangle [s + (r/4),h - (r/4)], (r * 0.5),(r * 0.5) unless j + 1 > i
 		end
 		resetStroke
 		stroke_horizontal_line s, w, :at => h unless (dates.is_a? Array and i > 27 and j == 0)
@@ -104,15 +118,75 @@ def drawMargins
 	undash()
 	
 end
+def minicalendar(fom)
+	eom = Date.new(fom.year, fom.mon, -1)
+	sdate = fom - (fom.cwday - 1)
+	edate = eom + (7 - eom.cwday)
+	edate += 6 if edate < eom
+	x = 310
+	y = 45
+	month = (sdate..edate)
+	bweek = sdate.strftime("%W").to_i
 
+	offset = 12
+	fill_color "999999"
+	7.times do |i|
+		date = month.to_a[i]
+		j = (offset * (7 - date.cwday))
+		a = date.cwday
+
+		d = %w(U M T W R F S U)[a]
+		draw_text d,
+					:at => [x - j + width_of("11") - width_of(d), y + offset],
+					:size => 8,
+					:font => 'DroidSansMono'		
+
+	end
+
+ (sdate..edate).each do |date|
+ 	  word = date.strftime("%_d")
+ 	  cweek = date.strftime("%W").to_i
+ 	  j = (offset * (7 - date.cwday))
+ 	  week_offset = (offset * week_offset(fom,sdate,edate,date)) * 0.8
+ 	  fill_color case
+			when is_holiday?(date)
+				"FF9999"
+			when date.cwday > 5
+				"9999FF"
+			when date.mon != fom.mon
+				"CCCCCC"
+			else
+				"999999"
+		end
+		draw_text word,
+			:at => [x - j + width_of("11") - width_of(word), y + week_offset],
+			:size => 8,
+			:font => 'DroidSansMono'
+  end
+end
+def week_offset(fom,bom,eom,date)
+	bweek = bom.cweek
+	cweek = date.cweek
+
+	if fom.mon == 12
+		cweek = date.cweek + 52 if eom.cweek < fom.cweek
+	elsif fom.mon == 1 
+
+		bweek = 0 if bom.mon == 12
+		cweek = date.cweek
+		cweek = 0 if cweek == 53
+		ap "#{bom} <=> #{date} <=> #{eom} (#{bweek}; #{cweek})"
+	end
+	return bweek - cweek
+end
 def junior
 	dash(3, :space => 7, :phase => 7)
 end
 
 def getDays(fom,i)
 	fomw = fom
-	fom -= (fom.cwday + 1) if i == 7
-	
+	fomw -= (fom.cwday - 1) if i < 27
+
 	days = []
 	i.times do
 		days << fomw
@@ -121,18 +195,17 @@ def getDays(fom,i)
 	days
 end
 def drawMonthTitle(date)
-	draw_text date.strftime("%B %Y"), :at => [0,bounds.height / 2], :rotate => 90, :size => 16
+	word = date.strftime("%B %Y")
+	cline = (bounds.height / 2) - (width_of(date.strftime("%B %Y")) / 2)
+	draw_text word, :at => [0,cline], :rotate => 90, :size => 16
 end
 
 def setFont
 	font_families.update(
-		"DroidSansMono" => {
-		  :normal => "fonts/Droid_Sans_Mono/DroidSansMono.ttf"
-		},
-		"DroidSans" => {
-		  :normal => "fonts/Droid_Sans/DroidSans.ttf"
-		}
+		"DroidSansMono" => {:normal => "fonts/Droid_Sans_Mono/DroidSansMono.ttf"},
+		"DroidSans"     => {:normal => "fonts/Droid_Sans/DroidSans.ttf"}
 	)
+	font 'DroidSans'
 end
 
 Prawn::Document.generate(
@@ -140,31 +213,37 @@ Prawn::Document.generate(
 	:margin => [18,18,18,18],
 	:page_layout => :landscape
 ) do
-	setFont
-	offset = 0
-	@today = Date.today
-	@fom   = Date.new(@today.year,@today.mon + offset,1)
-	@eom   = Date.new(@today.year,@today.mon + offset,-1)
+		setFont
+		offset = 0
+		line_width = 1
+		@today = Date.today
+		12.times do |i|
+			@fom   = Date.new(@today.year,i + 1 + offset,1)
+			@eom   = Date.new(@today.year,i + 1 + offset,-1)
 
-	# Set the Month Calendar View
-	
-	drawMonthTitle(@today)
-	
-  @month = getDays(@fom,@eom.day)
-	wideRule(30)
-  wideRule(@eom.day, 0, mid - 54, @month)
-  drawMidline
-  start_new_page
+			# Set the Month Calendar View
+		  if true
+				wideRule(30)
+				start_new_page
+				drawMonthTitle(@fom)
+				
+			  @month = getDays(@fom,@eom.day)
+				wideRule(30)
+			  wideRule(@eom.day, 0, mid - 54, @month)
+			  drawMidline
+			  start_new_page
+			end
 
-	# Set the weekly calendars
-	fom = @fom
-	5.times do 
-		@week = getDays(fom,7)
-		drawMidline
-		# drawMargins
-		wideRule(30)
-		wideRule(7, 0, mid - 54, @week)
-		start_new_page
-		fom += 7
-	end
+			# Set the weekly calendars
+			fom = @fom
+			5.times do 
+				@week = getDays(fom,7)
+				drawMidline
+				wideRule(30)
+				wideRule(7, 0, mid - 54, @week)
+				minicalendar(@fom)
+				start_new_page
+				fom += 7
+			end
+		end
 end
